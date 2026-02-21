@@ -13,19 +13,21 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['"Plus Jakarta Sans"', 'Inter', 'Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Inter', ...defaultTheme.fontFamily.sans],
+                display: ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
             },
             colors: {
                 brand: {
                     pink: {
-                        400: '#F472B6',
+                        DEFAULT: '#FF61D2',
                         500: '#EC4899',
-                        DEFAULT: '#F472B6', // Default to 400
+                        400: '#F472B6',
                     },
                     blue: {
+                        DEFAULT: '#49DEFF',
                         400: '#60A5FA',
-                        DEFAULT: '#60A5FA',
                     },
+                    light: '#FFF5FA',
                     yellow: {
                         400: '#FBBF24',
                         DEFAULT: '#FBBF24',

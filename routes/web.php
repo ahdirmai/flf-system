@@ -18,9 +18,17 @@ Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'ind
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
+Route::get('/my-transactions', [\App\Http\Controllers\DashboardController::class, 'myTransactions'])
+    ->middleware(['auth', 'verified'])
+    ->name('my-transactions');
+
 Route::get('/my-classes', [\App\Http\Controllers\DashboardController::class, 'myClasses'])
     ->middleware(['auth', 'verified'])
     ->name('my-classes');
+
+Route::get('/class/{slug}', [\App\Http\Controllers\DashboardController::class, 'show'])
+    ->middleware(['auth', 'verified'])
+    ->name('class.show');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

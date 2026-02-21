@@ -12,8 +12,17 @@ class DashboardController extends Controller
     public function index()
     {
         $classes = CreativeClass::where('status', 'active')->latest()->get();
+        $activeRegistrationsCount = 0;
+
+        if (Auth::check() && Auth::user()->participant) {
+            $activeRegistrationsCount = Auth::user()->participant->registrations()
+                ->whereIn('status', ['confirmed', 'pending'])
+                ->count();
+        }
+
         return Inertia::render('Dashboard', [
-            'availableClasses' => $classes
+            'availableClasses' => $classes,
+            'activeRegistrationsCount' => $activeRegistrationsCount
         ]);
     }
 
@@ -48,6 +57,48 @@ class DashboardController extends Controller
 
         return Inertia::render('Dashboard/MyClasses', [
             'registrations' => $registrations
+        ]);
+    }
+
+    public function show(string $slug)
+    {
+        $creativeClass = CreativeClass::where('slug', $slug)->firstOrFail();
+
+        return Inertia::render('Class/Show', [
+            'classDetails' => $creativeClass
+        ]);
+    }
+
+    public function myTransactions()
+    {
+        $user = Auth::user();
+
+        if (!$user->participant) {
+            return Inertia::render('Dashboard/MyTransactions', [
+                'transactions' => []
+            ]);
+        }
+
+        // Get payments via registrations
+        $transactions = \App\Models\Payment::whereHas('registration', function ($q) use ($user) {
+            $q->where('participant_id', $user->participant->id);
+        })
+            ->with(['registration.creativeClass'])
+            ->latest()
+            ->get()
+            ->map(function ($payment) {
+                return [
+                    'id' => $payment->uuid,
+                    'amount' => $payment->amount,
+                    'status' => $payment->status,
+                    'created_at' => $payment->created_at->toIso8601String(),
+                    'payment_method' => $payment->payment_method ?? 'Transfer',
+                    'class_name' => $payment->registration->creativeClass->name,
+                ];
+            });
+
+        return Inertia::render('Dashboard/MyTransactions', [
+            'transactions' => $transactions
         ]);
     }
 }
