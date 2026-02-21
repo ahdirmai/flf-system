@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 class TransactionController extends Controller
 {
@@ -57,47 +57,55 @@ class TransactionController extends Controller
             'proof' => 'nullable|image|max:4096',
         ]);
 
-        $status = $request->status;
-        $registrationStatus = $status === 'success' ? 'confirmed' : 'pending';
+        return DB::transaction(function () use ($request) {
+            try {
+                $status = $request->status;
+                $registrationStatus = $status === 'success' ? 'confirmed' : 'pending';
 
-        // Find or Create Registration
-        $registration = Registration::firstOrCreate(
-            [
-                'participant_id' => $request->participant_id,
-                'class_id' => $request->class_id,
-            ],
-            [
-                'status' => $registrationStatus,
-            ]
-        );
+                // Find or Create Registration
+                $registration = Registration::firstOrCreate(
+                    [
+                        'participant_id' => $request->participant_id,
+                        'class_id' => $request->class_id,
+                    ],
+                    [
+                        'status' => $registrationStatus,
+                    ]
+                );
 
-        // If registration existed, update status if payload implies success
-        if ($registration->wasRecentlyCreated) {
-            // Decrement quota if confirmed
-            if ($registrationStatus === 'confirmed') {
-                $creativeClass = CreativeClass::find($request->class_id);
-                $creativeClass->decrement('quota');
+                // If registration existed, update status if payload implies success
+                if ($registration->wasRecentlyCreated) {
+                    // Decrement quota if confirmed
+                    if ($registrationStatus === 'confirmed') {
+                        $creativeClass = CreativeClass::findOrFail($request->class_id);
+                        $creativeClass->decrement('quota');
+                    }
+                } else {
+                    // If exists, force update status if payment is success
+                    if ($status === 'success' && $registration->status !== 'confirmed') {
+                        $registration->update(['status' => 'confirmed']);
+                        $creativeClass = CreativeClass::findOrFail($request->class_id);
+                        $creativeClass->decrement('quota');
+                    }
+                }
+
+                // Create Payment
+                $payment = $registration->payment()->create([
+                    'amount' => $request->amount,
+                    'paid_amount' => $status === 'success' ? $request->amount : 0,
+                    'payment_method' => $request->payment_method,
+                    'status' => $status,
+                ]);
+
+                if ($request->hasFile('proof')) {
+                    $payment->addMediaFromRequest('proof')->toMediaCollection('proof');
+                }
+
+                return redirect()->route('admin.transactions.index')->with('success', 'Transaksi berhasil disimpan.');
+            } catch (\Exception $e) {
+                return back()->with('error', 'Gagal menyimpan transaksi: ' . $e->getMessage())->withInput();
             }
-        } else {
-            // If exists, force update status if payment is success
-            if ($status === 'success') {
-                $registration->update(['status' => 'confirmed']);
-            }
-        }
-
-        // Create Payment
-        $payment = $registration->payment()->create([
-            'amount' => $request->amount,
-            'paid_amount' => $status === 'success' ? $request->amount : 0, // Assumption
-            'payment_method' => $request->payment_method,
-            'status' => $status,
-        ]);
-
-        if ($request->hasFile('proof')) {
-            $payment->addMediaFromRequest('proof')->toMediaCollection('proof');
-        }
-
-        return redirect()->route('admin.transactions.index')->with('success', 'Transaction created successfully.');
+        });
     }
 
     public function verify(Request $request, string $id)
@@ -108,13 +116,19 @@ class TransactionController extends Controller
             'action' => 'required|in:approve,reject'
         ]);
 
-        if ($request->action === 'approve') {
-            $payment->update(['status' => 'success']);
-            $payment->registration->update(['status' => 'confirmed']);
-        } elseif ($request->action === 'reject') {
-            $payment->update(['status' => 'failed']);
-        }
+        return DB::transaction(function () use ($request, $payment) {
+            try {
+                if ($request->action === 'approve') {
+                    $payment->update(['status' => 'success']);
+                    $payment->registration->update(['status' => 'confirmed']);
+                } elseif ($request->action === 'reject') {
+                    $payment->update(['status' => 'failed']);
+                }
 
-        return redirect()->back()->with('success', 'Transaction updated successfully.');
+                return redirect()->back()->with('success', 'Verifikasi pembayaran berhasil diperbarui.');
+            } catch (\Exception $e) {
+                return back()->with('error', 'Gagal memverifikasi: ' . $e->getMessage());
+            }
+        });
     }
 }

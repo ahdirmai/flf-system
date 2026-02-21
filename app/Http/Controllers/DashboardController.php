@@ -13,16 +13,24 @@ class DashboardController extends Controller
     {
         $classes = CreativeClass::where('status', 'active')->latest()->get();
         $activeRegistrationsCount = 0;
+        $registeredClassIds = [];
 
         if (Auth::check() && Auth::user()->participant) {
-            $activeRegistrationsCount = Auth::user()->participant->registrations()
+            $participant = Auth::user()->participant;
+            
+            $activeRegistrationsCount = $participant->registrations()
                 ->whereIn('status', ['confirmed', 'pending'])
                 ->count();
+
+            $registeredClassIds = $participant->registrations()
+                ->pluck('class_id')
+                ->toArray();
         }
 
         return Inertia::render('Dashboard', [
             'availableClasses' => $classes,
-            'activeRegistrationsCount' => $activeRegistrationsCount
+            'activeRegistrationsCount' => $activeRegistrationsCount,
+            'registeredClassIds' => $registeredClassIds
         ]);
     }
 
@@ -63,9 +71,18 @@ class DashboardController extends Controller
     public function show(string $slug)
     {
         $creativeClass = CreativeClass::where('slug', $slug)->firstOrFail();
+        
+        $registration = null;
+        if (Auth::check() && Auth::user()->participant) {
+            $registration = \App\Models\Registration::where('participant_id', Auth::user()->participant->id)
+                ->where('class_id', $creativeClass->id)
+                ->with('payment')
+                ->first();
+        }
 
         return Inertia::render('Class/Show', [
-            'classDetails' => $creativeClass
+            'classDetails' => $creativeClass,
+            'userRegistration' => $registration
         ]);
     }
 

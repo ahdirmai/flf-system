@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
+use Illuminate\Support\Facades\DB;
+
 class ParticipantController extends Controller
 {
     public function index()
@@ -30,27 +32,33 @@ class ParticipantController extends Controller
             'phone' => ['required', 'string', 'max:20', Rule::unique('participants', 'phone_number')],
         ]);
 
-        $user = User::firstOrCreate(
-            ['username' => $request->phone],
-            [
-                'name' => $request->name,
-                'password' => Hash::make($request->phone), // Default password
-            ]
-        );
+        return DB::transaction(function () use ($request) {
+            try {
+                $user = User::firstOrCreate(
+                    ['username' => $request->phone],
+                    [
+                        'name' => $request->name,
+                        'password' => Hash::make($request->phone),
+                    ]
+                );
 
-        if (!$user->hasRole('participant')) {
-            $user->assignRole('participant');
-        }
+                if (!$user->hasRole('participant')) {
+                    $user->assignRole('participant');
+                }
 
-        Participant::firstOrCreate(
-            ['user_id' => $user->id],
-            [
-                'name' => $request->name,
-                'phone_number' => $request->phone,
-            ]
-        );
+                Participant::firstOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'name' => $request->name,
+                        'phone_number' => $request->phone,
+                    ]
+                );
 
-        return back()->with('success', 'Participant created successfully.');
+                return back()->with('success', 'Peserta berhasil didaftarkan.');
+            } catch (\Exception $e) {
+                return back()->with('error', 'Gagal mendaftarkan peserta: ' . $e->getMessage())->withInput();
+            }
+        });
     }
 
     public function show($id)
@@ -69,24 +77,28 @@ class ParticipantController extends Controller
             'phone' => ['required', 'string', 'max:20', Rule::unique('participants', 'phone_number')->ignore($id)],
         ]);
 
-        $participant = Participant::findOrFail($id);
-        $participant->update([
-            'name' => $request->name,
-            'phone_number' => $request->phone,
-        ]);
-
-        if ($participant->user_id) {
-            $user = User::find($participant->user_id);
-            if ($user) {
-                // If the phone number changed, we might need to check uniqueness on User table too.
-                // Assuming username matches phone
-                $user->update([
+        return DB::transaction(function () use ($request, $id) {
+            try {
+                $participant = Participant::findOrFail($id);
+                $participant->update([
                     'name' => $request->name,
-                    'username' => $request->phone,
+                    'phone_number' => $request->phone,
                 ]);
-            }
-        }
 
-        return back()->with('success', 'Participant updated successfully.');
+                if ($participant->user_id) {
+                    $user = User::find($participant->user_id);
+                    if ($user) {
+                        $user->update([
+                            'name' => $request->name,
+                            'username' => $request->phone,
+                        ]);
+                    }
+                }
+
+                return back()->with('success', 'Data peserta berhasil diperbarui.');
+            } catch (\Exception $e) {
+                return back()->with('error', 'Gagal memperbarui data: ' . $e->getMessage())->withInput();
+            }
+        });
     }
 }

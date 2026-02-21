@@ -12,6 +12,8 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\ParticipantsImport;
 use App\Exports\ParticipantsTemplateExport;
 
+use Illuminate\Support\Facades\DB;
+
 class CreativeClassController extends Controller
 {
     /**
@@ -51,15 +53,21 @@ class CreativeClassController extends Controller
             'thumbnail' => 'nullable|image|max:2048',
         ]);
 
-        $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(5);
+        return DB::transaction(function () use ($request, $validated) {
+            try {
+                $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(5);
 
-        $creativeClass = CreativeClass::create($validated);
+                $creativeClass = CreativeClass::create($validated);
 
-        if ($request->hasFile('thumbnail')) {
-            $creativeClass->addMediaFromRequest('thumbnail')->toMediaCollection('thumbnails');
-        }
+                if ($request->hasFile('thumbnail')) {
+                    $creativeClass->addMediaFromRequest('thumbnail')->toMediaCollection('thumbnails');
+                }
 
-        return redirect()->route('admin.classes.index')->with('success', 'Class created successfully.');
+                return redirect()->route('admin.classes.index')->with('success', 'Workshop berhasil dibuat.');
+            } catch (\Exception $e) {
+                return back()->with('error', 'Gagal membuat workshop: ' . $e->getMessage())->withInput();
+            }
+        });
     }
 
     /**
@@ -89,23 +97,28 @@ class CreativeClassController extends Controller
             'dates' => 'nullable|array',
             'dates.*' => 'date',
             'start_registration' => 'required|date',
-
             'end_registration' => 'required|date|after_or_equal:start_registration',
             'thumbnail' => 'nullable|image|max:2048',
         ]);
 
-        if ($request->name !== $creativeClass->name) {
-            $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(5);
-        }
+        return DB::transaction(function () use ($request, $validated, $creativeClass) {
+            try {
+                if ($request->name !== $creativeClass->name) {
+                    $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(5);
+                }
 
-        $creativeClass->update($validated);
+                $creativeClass->update($validated);
 
-        if ($request->hasFile('thumbnail')) {
-            $creativeClass->clearMediaCollection('thumbnails');
-            $creativeClass->addMediaFromRequest('thumbnail')->toMediaCollection('thumbnails');
-        }
+                if ($request->hasFile('thumbnail')) {
+                    $creativeClass->clearMediaCollection('thumbnails');
+                    $creativeClass->addMediaFromRequest('thumbnail')->toMediaCollection('thumbnails');
+                }
 
-        return redirect()->route('admin.classes.index')->with('success', 'Class updated successfully.');
+                return redirect()->route('admin.classes.index')->with('success', 'Workshop berhasil diperbarui.');
+            } catch (\Exception $e) {
+                return back()->with('error', 'Gagal memperbarui workshop: ' . $e->getMessage())->withInput();
+            }
+        });
     }
 
     /**
@@ -114,10 +127,17 @@ class CreativeClassController extends Controller
     public function destroy(string $id)
     {
         $creativeClass = CreativeClass::where('uuid', $id)->firstOrFail();
-        $creativeClass->delete();
-
-        return redirect()->route('admin.classes.index')->with('success', 'Class deleted successfully.');
+        
+        return DB::transaction(function () use ($creativeClass) {
+            try {
+                $creativeClass->delete();
+                return redirect()->route('admin.classes.index')->with('success', 'Workshop berhasil dihapus.');
+            } catch (\Exception $e) {
+                return back()->with('error', 'Gagal menghapus workshop: ' . $e->getMessage());
+            }
+        });
     }
+
     /**
      * Display the specified resource.
      */
@@ -148,9 +168,14 @@ class CreativeClassController extends Controller
             'file' => 'required|mimes:xlsx,xls,csv'
         ]);
 
-        Excel::import(new ParticipantsImport($creativeClass), $request->file('file'));
-
-        return redirect()->back()->with('success', 'Participants imported successfully.');
+        return DB::transaction(function () use ($request, $creativeClass) {
+            try {
+                Excel::import(new ParticipantsImport($creativeClass), $request->file('file'));
+                return redirect()->back()->with('success', 'Peserta berhasil diimpor.');
+            } catch (\Exception $e) {
+                return back()->with('error', 'Gagal mengimpor peserta: ' . $e->getMessage());
+            }
+        });
     }
 
     public function downloadTemplate()
@@ -168,59 +193,65 @@ class CreativeClassController extends Controller
             'phone' => 'required_without:participant_id|string|max:20|nullable',
         ]);
 
-        if ($request->filled('participant_id')) {
-            $participant = \App\Models\Participant::findOrFail($request->participant_id);
-        } else {
-            $name = $request->name;
-            $phone = $request->phone;
+        return DB::transaction(function () use ($request, $creativeClass) {
+            try {
+                if ($request->filled('participant_id')) {
+                    $participant = \App\Models\Participant::findOrFail($request->participant_id);
+                } else {
+                    $name = $request->name;
+                    $phone = $request->phone;
 
-            // 1. Find or Create User
-            $user = \App\Models\User::firstOrCreate(
-                ['username' => $phone],
-                [
-                    'name' => $name,
-                    'password' => \Illuminate\Support\Facades\Hash::make($phone),
-                ]
-            );
+                    // 1. Find or Create User
+                    $user = \App\Models\User::firstOrCreate(
+                        ['username' => $phone],
+                        [
+                            'name' => $name,
+                            'password' => Hash::make($phone),
+                        ]
+                    );
 
-            // Assign role safely
-            if (!$user->hasRole('participant')) {
-                $user->assignRole('participant');
+                    // Assign role safely
+                    if (!$user->hasRole('participant')) {
+                        $user->assignRole('participant');
+                    }
+
+                    // 2. Find or Create Participant
+                    $participant = \App\Models\Participant::firstOrCreate(
+                        ['user_id' => $user->id],
+                        [
+                            'name' => $name,
+                            'phone_number' => $phone,
+                        ]
+                    );
+                }
+
+                // 3. Register to Class
+                $exists = \App\Models\Registration::where('participant_id', $participant->id)
+                    ->where('class_id', $creativeClass->id)
+                    ->exists();
+
+                if ($exists) {
+                    return back()->with('error', 'Peserta ini sudah terdaftar di kelas ini.');
+                }
+
+                // Check Quota
+                if ($creativeClass->quota <= 0) {
+                    return back()->with('error', 'Kuota kelas sudah penuh.');
+                }
+
+                \App\Models\Registration::create([
+                    'participant_id' => $participant->id,
+                    'class_id' => $creativeClass->id,
+                    'status' => 'confirmed', // Admin manually adding => Confirmed
+                ]);
+
+                // Decrement Quota
+                $creativeClass->decrement('quota');
+
+                return back()->with('success', 'Berhasil menambahkan peserta ke kelas ini.');
+            } catch (\Exception $e) {
+                return back()->with('error', 'Gagal menambahkan peserta: ' . $e->getMessage())->withInput();
             }
-
-            // 2. Find or Create Participant
-            $participant = \App\Models\Participant::firstOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'name' => $name,
-                    'phone_number' => $phone,
-                ]
-            );
-        }
-
-        // 3. Register to Class
-        $exists = \App\Models\Registration::where('participant_id', $participant->id)
-            ->where('class_id', $creativeClass->id)
-            ->exists();
-
-        if ($exists) {
-            return back()->with('error', 'Peserta ini sudah terdaftar di kelas ini.');
-        }
-
-        // Check Quota
-        if ($creativeClass->quota <= 0) {
-            return back()->with('error', 'Kuota kelas sudah penuh.');
-        }
-
-        \App\Models\Registration::create([
-            'participant_id' => $participant->id,
-            'class_id' => $creativeClass->id,
-            'status' => 'confirmed', // Admin manually adding => Confirmed
-        ]);
-
-        // Decrement Quota
-        $creativeClass->decrement('quota');
-
-        return back()->with('success', 'Berhasil menambahkan peserta ke kelas ini.');
+        });
     }
 }

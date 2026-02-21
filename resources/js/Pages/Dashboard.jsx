@@ -1,15 +1,18 @@
 import UserLayout from '@/Layouts/UserLayout';
 import { Head, Link, router } from '@inertiajs/react';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, ArrowRight } from 'lucide-react';
+import { useState } from 'react';
+import RegistrationModal from '@/Components/RegistrationModal';
 
-export default function Dashboard({ auth, availableClasses, activeRegistrationsCount }) {
+export default function Dashboard({ auth, availableClasses, activeRegistrationsCount, registeredClassIds }) {
 
-    const handleRegister = (classUuid) => {
-        if (confirm('Are you sure you want to register for this class?')) {
-            router.post(route('registrations.store'), {
-                class_id: classUuid
-            });
-        }
+    const [showModal, setShowModal] = useState(false);
+    const [selectedClass, setSelectedClass] = useState(null);
+
+    const handleRegister = (cls) => {
+        if (cls.quota <= 0) return;
+        setSelectedClass(cls);
+        setShowModal(true);
     };
 
     const formatPrice = (price) => {
@@ -41,8 +44,8 @@ export default function Dashboard({ auth, availableClasses, activeRegistrationsC
             */}
             <header className="hidden md:flex justify-between items-center mb-8">
                 <div>
-                    <h2 className="text-2xl font-black text-slate-800 leading-tight font-display">Halo, Kak {auth.user.name.split(' ')[0]}! ✨</h2>
-                    <p className="text-slate-500 text-sm font-medium">Siap berkarya hari ini?</p>
+                    <h2 className="text-2xl font-black text-slate-800 dark:text-white leading-tight font-display">Halo, Kak {auth.user.name.split(' ')[0]}! ✨</h2>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Siap berkarya hari ini?</p>
                 </div>
             </header>
 
@@ -51,20 +54,20 @@ export default function Dashboard({ auth, availableClasses, activeRegistrationsC
                 <button className="bg-brand-pink text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-brand whitespace-nowrap transition-transform hover:scale-105">
                     Semua Kelas
                 </button>
-                <button className="bg-white text-slate-400 px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap border border-pink-50 hover:text-brand-pink hover:bg-pink-50 transition-colors">
+                <button className="bg-white dark:bg-gray-800 text-slate-400 dark:text-gray-400 px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap border border-pink-50 dark:border-gray-700 hover:text-brand-pink dark:hover:text-brand-pink hover:bg-pink-50 dark:hover:bg-gray-700 transition-colors">
                     Painting
                 </button>
-                <button className="bg-white text-slate-400 px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap border border-pink-50 hover:text-brand-pink hover:bg-pink-50 transition-colors">
+                <button className="bg-white dark:bg-gray-800 text-slate-400 dark:text-gray-400 px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap border border-pink-50 dark:border-gray-700 hover:text-brand-pink dark:hover:text-brand-pink hover:bg-pink-50 dark:hover:bg-gray-700 transition-colors">
                     Beauty
                 </button>
-                <button className="bg-white text-slate-400 px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap border border-pink-50 hover:text-brand-pink hover:bg-pink-50 transition-colors">
+                <button className="bg-white dark:bg-gray-800 text-slate-400 dark:text-gray-400 px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap border border-pink-50 dark:border-gray-700 hover:text-brand-pink dark:hover:text-brand-pink hover:bg-pink-50 dark:hover:bg-gray-700 transition-colors">
                     Kids
                 </button>
             </div>
 
             {/* Popular Workshops Header */}
             <div className="flex justify-between items-center mb-6 mt-4">
-                <h3 className="font-black text-slate-800 text-lg uppercase tracking-wide font-display">Workshop Terpopuler</h3>
+                <h3 className="font-black text-slate-800 dark:text-white text-lg uppercase tracking-wide font-display">Workshop Terpopuler</h3>
                 <a href="#" className="text-brand-pink font-bold text-xs uppercase tracking-widest hover:underline">Lihat Semua</a>
             </div>
 
@@ -72,15 +75,15 @@ export default function Dashboard({ auth, availableClasses, activeRegistrationsC
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-8">
                 {availableClasses.length > 0 ? (
                     availableClasses.map((cls) => (
-                        <div key={cls.id} className="bg-white rounded-4xl p-3 shadow-xl shadow-pink-100/50 group hover:shadow-2xl hover:shadow-pink-200/50 transition-all duration-300">
-                            <div className="relative h-56 w-full overflow-hidden rounded-[28px]">
+                        <div key={cls.id} className="bg-white dark:bg-gray-900 rounded-4xl p-3 shadow-xl shadow-pink-100/50 dark:shadow-none group hover:shadow-2xl hover:shadow-pink-200/50 dark:hover:shadow-pink-900/10 transition-all duration-300 border border-transparent dark:border-gray-800 dark:hover:border-gray-700">
+                            <Link href={route('class.show', cls.slug)} className="relative h-56 w-full overflow-hidden rounded-[28px] block">
                                 <img
                                     src={cls.thumbnail_url || 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=800&q=80'} // Fallback image
                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                     alt={cls.name}
                                 />
                                 {cls.quota > 0 && cls.quota <= 5 && (
-                                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-xl shadow-sm text-[10px] font-black text-brand-pink uppercase">
+                                    <div className="absolute top-4 left-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md px-3 py-1 rounded-xl shadow-sm text-[10px] font-black text-brand-pink uppercase">
                                         Sisa {cls.quota} Slot
                                     </div>
                                 )}
@@ -89,55 +92,75 @@ export default function Dashboard({ auth, availableClasses, activeRegistrationsC
                                         Sold Out
                                     </div>
                                 )}
-                            </div>
+                            </Link>
                             <div className="p-5">
-                                <p className="text-brand-blue font-black text-[10px] uppercase tracking-widest font-display">
+                                <p className="text-brand-blue dark:text-blue-400 font-black text-[10px] uppercase tracking-widest font-display">
                                     General • All Levels
                                 </p>
-                                <h4 className="text-xl font-extrabold text-slate-900 mt-1 leading-tight font-display min-h-[3.5rem] line-clamp-2">
-                                    {cls.name}
-                                </h4>
+                                <Link href={route('class.show', cls.slug)} className="block mt-1 group-hover:text-brand-pink transition-colors">
+                                    <h4 className="text-xl font-extrabold text-slate-900 dark:text-white mt-1 leading-tight font-display min-h-[3.5rem] line-clamp-2">
+                                        {cls.name}
+                                    </h4>
+                                </Link>
 
-                                <div className="flex items-center mt-4 text-slate-400 text-xs font-semibold">
+                                <div className="flex items-center mt-4 text-slate-400 dark:text-slate-500 text-xs font-semibold">
                                     <Clock className="w-4 h-4 mr-1.5" />
                                     <span>{cls.start_registration ? formatDate(cls.start_registration) : 'Date TBA'}</span>
                                 </div>
 
-                                <div className="flex items-center justify-between mt-8">
-                                    <div>
-                                        <p className="text-[10px] font-bold text-slate-300 uppercase leading-none mb-1">Investasi</p>
-                                        <span className="text-2xl font-black text-brand-pink leading-none font-display">
-                                            {formatPrice(cls.price)}
-                                        </span>
+                                <div className="mt-8 pt-5 border-t border-slate-50 dark:border-gray-800">
+                                    <div className="flex items-center justify-between mb-5">
+                                        <div>
+                                            <p className="text-[10px] font-bold text-slate-300 dark:text-slate-600 uppercase leading-none mb-2">Investasi</p>
+                                            <span className="text-2xl font-black text-brand-pink leading-none font-display">
+                                                {formatPrice(cls.price)}
+                                            </span>
+                                        </div>
                                     </div>
                                     <button
-                                        onClick={() => handleRegister(cls.uuid)}
-                                        disabled={cls.quota <= 0}
-                                        className={`px-8 py-3 rounded-2xl font-black text-sm shadow-brand hover:scale-105 transition-transform ${cls.quota > 0
-                                                ? 'bg-brand-pink text-white'
-                                                : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none hover:scale-100'
+                                        onClick={() => handleRegister(cls)}
+                                        disabled={cls.quota <= 0 || registeredClassIds.includes(cls.id)}
+                                        className={`w-full py-4 rounded-2xl font-black text-sm shadow-brand hover:scale-[1.02] transition-all transform active:scale-[0.98] relative overflow-hidden group ${cls.quota > 0 && !registeredClassIds.includes(cls.id)
+                                            ? 'bg-gradient-to-br from-rose-500 to-pink-600 text-white shadow-xl shadow-rose-500/20 hover:shadow-rose-500/40'
+                                            : registeredClassIds.includes(cls.id)
+                                                ? 'bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30'
+                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed shadow-none hover:scale-100 border border-transparent dark:border-gray-700'
                                             }`}
                                     >
-                                        {cls.quota > 0 ? 'Daftar' : 'Full'}
+                                        <div className="relative z-10 flex items-center justify-center gap-2">
+                                            {registeredClassIds.includes(cls.id) ? (
+                                                'Sudah Terdaftar ✨'
+                                            ) : cls.quota > 0 ? (
+                                                <>
+                                                    Daftar Sekarang
+                                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                                </>
+                                            ) : (
+                                                'Kuota Penuh'
+                                            )}
+                                        </div>
+                                        {cls.quota > 0 && !registeredClassIds.includes(cls.id) && (
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                                        )}
                                     </button>
                                 </div>
                             </div>
                         </div>
                     ))
                 ) : (
-                    <div className="col-span-full text-center py-10 text-gray-500">
+                    <div className="col-span-full text-center py-10 text-gray-500 dark:text-gray-400">
                         Belum ada kelas yang tersedia saat ini.
                     </div>
                 )}
             </div>
 
             {/* My Classes CTA */}
-            <section className="mt-12 bg-white/50 border-2 border-dashed border-pink-200 rounded-4xl p-8 text-center backdrop-blur-sm">
-                <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <section className="mt-12 bg-white/50 dark:bg-gray-800/20 border-2 border-dashed border-pink-200 dark:border-gray-800 rounded-4xl p-8 text-center backdrop-blur-sm">
+                <div className="w-16 h-16 bg-pink-100 dark:bg-rose-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Calendar className="w-8 h-8 text-brand-pink" />
                 </div>
-                <h4 className="font-bold text-slate-800 text-lg font-display">Lihat Kelas Kamu</h4>
-                <p className="text-sm text-slate-500 mb-6">
+                <h4 className="font-bold text-slate-800 dark:text-white text-lg font-display">Lihat Kelas Kamu</h4>
+                <p className="text-sm text-slate-500 dark:text-gray-400 mb-6">
                     {activeRegistrationsCount > 0
                         ? `Kamu punya ${activeRegistrationsCount} kelas yang akan datang!`
                         : 'Belum ada kelas yang diikuti. Daftar sekarang!'}
@@ -150,6 +173,13 @@ export default function Dashboard({ auth, availableClasses, activeRegistrationsC
                 </Link>
             </section>
 
+            {/* Registration Modal */}
+            <RegistrationModal
+                show={showModal}
+                onClose={() => setShowModal(false)}
+                auth={auth}
+                classDetails={selectedClass}
+            />
         </UserLayout>
     );
 }

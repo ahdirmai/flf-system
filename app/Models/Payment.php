@@ -25,10 +25,19 @@ class Payment extends Model implements HasMedia
         'status',
     ];
 
+    protected $appends = [
+        'proof_url',
+    ];
+
     protected $casts = [
         'amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
     ];
+
+    public function getProofUrlAttribute()
+    {
+        return $this->getFirstMediaUrl('proof');
+    }
 
     public function registration()
     {

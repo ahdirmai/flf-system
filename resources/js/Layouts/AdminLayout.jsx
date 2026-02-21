@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import { useTheme } from '../Contexts/ThemeContext';
 import AdminSidebar from '@/Components/AdminSidebar';
+import Toast from '@/Components/Toast';
 
 export default function AdminLayout({ children, header }) {
     const user = usePage().props.auth.user;
@@ -21,6 +22,7 @@ export default function AdminLayout({ children, header }) {
                 )}
                 {children}
             </main>
+            <Toast />
         </div>
     );
 }
