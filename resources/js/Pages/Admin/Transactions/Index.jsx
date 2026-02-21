@@ -93,7 +93,7 @@ export default function Index({ auth, payments }) {
                                                             <Eye size={16} className="mr-1" /> View
                                                         </button>
                                                     ) : (
-                                                        <span className="text-gray-400 dark:text-gray-600 italic">No Proof</span>
+                                                        <span className="text-gray-500 dark:text-gray-400 italic">No Proof</span>
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

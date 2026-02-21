@@ -119,10 +119,21 @@ export default function Show({ auth, classDetails }) {
                                     <li className="flex items-start">
                                         <Clock className="w-5 h-5 text-brand-pink mr-3 mt-0.5" />
                                         <div>
-                                            <span className="block font-bold text-slate-800">Time</span>
-                                            <span className="text-sm text-slate-500">
-                                                {classDetails.start_registration ? new Date(classDetails.start_registration).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBA'}
-                                            </span>
+                                            <span className="block font-bold text-slate-800">Schedules</span>
+                                            {classDetails.dates && classDetails.dates.length > 0 ? (
+                                                <ul className="mt-2 space-y-2">
+                                                    {classDetails.dates.map((dateString, idx) => (
+                                                        <li key={idx} className="flex flex-col">
+                                                            <span className="text-xs font-bold text-brand-pink uppercase">Day {idx + 1}</span>
+                                                            <span className="text-sm text-slate-500">
+                                                                {formatDate(dateString, true)}
+                                                            </span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <span className="text-sm text-slate-500">TBA</span>
+                                            )}
                                         </div>
                                     </li>
                                     <li className="flex items-start">
@@ -145,8 +156,8 @@ export default function Show({ auth, classDetails }) {
                                     onClick={handleRegister}
                                     disabled={classDetails.quota <= 0}
                                     className={`w-full py-4 rounded-2xl font-black text-lg shadow-brand transition-all hover:scale-105 active:scale-95 ${classDetails.quota > 0
-                                            ? 'bg-brand-pink text-white hover:bg-brand-pink/90'
-                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none hover:scale-100'
+                                        ? 'bg-brand-pink text-white hover:bg-brand-pink/90'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none hover:scale-100'
                                         }`}
                                 >
                                     {classDetails.quota > 0 ? 'Daftar Sekarang' : 'Sold Out'}

@@ -44,6 +44,8 @@ class CreativeClassController extends Controller
             'price' => 'required|numeric|min:0',
             'quota' => 'required|integer|min:1',
             'status' => 'required|in:draft,active,done,archive',
+            'dates' => 'nullable|array',
+            'dates.*' => 'date',
             'start_registration' => 'required|date',
             'end_registration' => 'required|date|after_or_equal:start_registration',
             'thumbnail' => 'nullable|image|max:2048',
@@ -84,6 +86,8 @@ class CreativeClassController extends Controller
             'price' => 'required|numeric|min:0',
             'quota' => 'required|integer|min:1',
             'status' => 'required|in:draft,active,done,archive',
+            'dates' => 'nullable|array',
+            'dates.*' => 'date',
             'start_registration' => 'required|date',
 
             'end_registration' => 'required|date|after_or_equal:start_registration',
@@ -123,9 +127,16 @@ class CreativeClassController extends Controller
             ->where('uuid', $id)
             ->firstOrFail();
 
+        // Get participants who are NOT registered in this class
+        $registeredParticipantIds = $creativeClass->registrations->pluck('participant_id')->toArray();
+        $availableParticipants = \App\Models\Participant::whereNotIn('id', $registeredParticipantIds)
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('Admin/Classes/Show', [
             'creativeClass' => $creativeClass,
-            'registrations' => $creativeClass->registrations
+            'registrations' => $creativeClass->registrations,
+            'availableParticipants' => $availableParticipants
         ]);
     }
 
@@ -145,5 +156,71 @@ class CreativeClassController extends Controller
     public function downloadTemplate()
     {
         return Excel::download(new ParticipantsTemplateExport, 'participants_template.xlsx');
+    }
+
+    public function addParticipant(Request $request, string $id)
+    {
+        $creativeClass = CreativeClass::where('uuid', $id)->firstOrFail();
+
+        $request->validate([
+            'participant_id' => 'nullable|exists:participants,id',
+            'name' => 'required_without:participant_id|string|max:255|nullable',
+            'phone' => 'required_without:participant_id|string|max:20|nullable',
+        ]);
+
+        if ($request->filled('participant_id')) {
+            $participant = \App\Models\Participant::findOrFail($request->participant_id);
+        } else {
+            $name = $request->name;
+            $phone = $request->phone;
+
+            // 1. Find or Create User
+            $user = \App\Models\User::firstOrCreate(
+                ['username' => $phone],
+                [
+                    'name' => $name,
+                    'password' => \Illuminate\Support\Facades\Hash::make($phone),
+                ]
+            );
+
+            // Assign role safely
+            if (!$user->hasRole('participant')) {
+                $user->assignRole('participant');
+            }
+
+            // 2. Find or Create Participant
+            $participant = \App\Models\Participant::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'name' => $name,
+                    'phone_number' => $phone,
+                ]
+            );
+        }
+
+        // 3. Register to Class
+        $exists = \App\Models\Registration::where('participant_id', $participant->id)
+            ->where('class_id', $creativeClass->id)
+            ->exists();
+
+        if ($exists) {
+            return back()->with('error', 'Peserta ini sudah terdaftar di kelas ini.');
+        }
+
+        // Check Quota
+        if ($creativeClass->quota <= 0) {
+            return back()->with('error', 'Kuota kelas sudah penuh.');
+        }
+
+        \App\Models\Registration::create([
+            'participant_id' => $participant->id,
+            'class_id' => $creativeClass->id,
+            'status' => 'confirmed', // Admin manually adding => Confirmed
+        ]);
+
+        // Decrement Quota
+        $creativeClass->decrement('quota');
+
+        return back()->with('success', 'Berhasil menambahkan peserta ke kelas ini.');
     }
 }

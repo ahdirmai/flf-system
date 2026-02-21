@@ -1,21 +1,23 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Home, BookOpen, User, LogOut } from 'lucide-react';
+import { Home, BookOpen, User, LogOut, Moon, Sun } from 'lucide-react';
+import { useTheme } from '../Contexts/ThemeContext';
 
 export default function UserLayout({ children }) {
     const { auth } = usePage().props;
     const { url } = usePage();
+    const { theme, toggleTheme } = useTheme();
 
     const isActive = (routePattern) => {
         return url.startsWith(routePattern);
     };
 
     return (
-        <div className="min-h-screen bg-brand-light font-sans text-slate-800 pb-24 md:pb-0">
+        <div className={`min-h-screen ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-brand-light text-slate-800'} font-sans pb-24 md:pb-0`}>
             {/* Desktop Sidebar */}
-            <aside className="hidden md:flex fixed left-0 inset-y-0 w-64 bg-white border-r border-brand-pink/20 flex-col p-6 z-50">
+            <aside className={`hidden md:flex fixed left-0 inset-y-0 w-64 ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-brand-pink/20'} border-r flex-col p-6 z-50`}>
                 <div className="mb-10 px-2">
                     <h1 className="text-2xl font-black text-brand-pink tracking-tight font-display">
-                        FLF.<span className="text-slate-800">FUN</span>
+                        FLF.<span className={theme === 'dark' ? 'text-gray-100' : 'text-slate-800'}>FUN</span>
                     </h1>
                 </div>
 
@@ -23,8 +25,8 @@ export default function UserLayout({ children }) {
                     <Link
                         href={route('dashboard')}
                         className={`flex items-center space-x-3 p-4 rounded-3xl font-bold transition-all ${url === '/dashboard'
-                                ? 'bg-brand-pink text-white shadow-brand'
-                                : 'text-slate-400 hover:bg-pink-50 hover:text-brand-pink'
+                            ? 'bg-brand-pink text-white shadow-brand dark:shadow-pink-900/20'
+                            : 'text-slate-400 hover:bg-pink-50 hover:text-brand-pink dark:text-gray-400 dark:hover:bg-gray-800'
                             }`}
                     >
                         <Home className="w-5 h-5" />
@@ -33,8 +35,8 @@ export default function UserLayout({ children }) {
                     <Link
                         href={route('my-classes')}
                         className={`flex items-center space-x-3 p-4 rounded-3xl font-bold transition-all ${isActive('/my-classes')
-                                ? 'bg-brand-pink text-white shadow-brand'
-                                : 'text-slate-400 hover:bg-pink-50 hover:text-brand-pink'
+                            ? 'bg-brand-pink text-white shadow-brand dark:shadow-pink-900/20'
+                            : 'text-slate-400 hover:bg-pink-50 hover:text-brand-pink dark:text-gray-400 dark:hover:bg-gray-800'
                             }`}
                     >
                         <BookOpen className="w-5 h-5" />
@@ -43,15 +45,23 @@ export default function UserLayout({ children }) {
                 </nav>
 
                 <div className="mt-auto p-2">
+                    <button
+                        onClick={toggleTheme}
+                        className={`mb-6 flex w-full items-center justify-center space-x-2 rounded-2xl px-4 py-3 text-xs font-bold transition-all ${theme === 'dark' ? 'text-gray-400 bg-gray-800/50 hover:bg-gray-800 hover:text-white' : 'text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-700'}`}
+                    >
+                        {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                        <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                    </button>
+
                     <div className="flex items-center space-x-3 mb-6">
                         <img
                             src={`https://ui-avatars.com/api/?name=${auth.user.name}&background=FF61D2&color=fff`}
-                            className="w-10 h-10 rounded-2xl"
+                            className="w-10 h-10 rounded-2xl dark:ring-1 dark:ring-gray-700"
                             alt="Profile"
                         />
                         <div>
-                            <p className="text-sm font-bold text-slate-800 truncate max-w-[120px]">{auth.user.name}</p>
-                            <p className="text-[10px] text-slate-400 font-bold">{auth.user.username}</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-gray-100 truncate max-w-[120px]">{auth.user.name}</p>
+                            <p className="text-[10px] text-slate-400 dark:text-gray-400 font-bold">{auth.user.username}</p>
                         </div>
                     </div>
                     <Link

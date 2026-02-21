@@ -168,21 +168,21 @@ export default function Index({ auth, classes }) {
                                                     <div className="flex items-center justify-end space-x-3">
                                                         <Link
                                                             href={route('admin.classes.show', c.uuid)}
-                                                            className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                                                            className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
                                                             title="View Details"
                                                         >
                                                             <Eye size={18} />
                                                         </Link>
                                                         <Link
                                                             href={route('admin.classes.edit', c.uuid)}
-                                                            className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                                            className="text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400"
                                                             title="Edit"
                                                         >
                                                             <Pencil size={18} />
                                                         </Link>
                                                         <button
                                                             onClick={() => handleDelete(c.uuid)}
-                                                            className="text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                                                            className="text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
                                                             title="Delete"
                                                         >
                                                             <Trash2 size={18} />

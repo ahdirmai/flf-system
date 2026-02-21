@@ -9,7 +9,7 @@ import ImageInput from '@/Components/ImageInput';
 import DateTimeInput from '@/Components/DateTimeInput';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Calendar } from 'lucide-react';
 
 export default function Create({ auth }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -18,11 +18,27 @@ export default function Create({ auth }) {
         price: '',
         quota: '',
         status: 'draft',
-        status: 'draft',
+        dates: [], // Array of date strings
         start_registration: null,
         end_registration: null,
         thumbnail: null,
     });
+
+    const addDate = () => {
+        setData('dates', [...data.dates, null]);
+    };
+
+    const removeDate = (index) => {
+        const newDates = [...data.dates];
+        newDates.splice(index, 1);
+        setData('dates', newDates);
+    };
+
+    const updateDate = (index, date) => {
+        const newDates = [...data.dates];
+        newDates[index] = date;
+        setData('dates', newDates);
+    };
 
     const submit = (e) => {
         e.preventDefault();
@@ -122,7 +138,59 @@ export default function Create({ auth }) {
                                 <InputError className="mt-2" message={errors.status} />
                             </div>
 
-                            <div className="mt-4 grid grid-cols-2 gap-4">
+                            <div className="mt-6 border-t border-gray-100 dark:border-gray-700 pt-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Jadwal Kelas</h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">Tambahkan satu atau beberapa tanggal pelaksanaan kelas.</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={addDate}
+                                        className="inline-flex items-center gap-2 rounded-xl bg-brand-pink/10 px-4 py-2 text-sm font-semibold text-brand-pink hover:bg-brand-pink/20 transition-colors"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Tambah Tanggal
+                                    </button>
+                                </div>
+
+                                {data.dates.length === 0 ? (
+                                    <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+                                        <Calendar className="mx-auto h-8 w-8 text-gray-400 mb-3" />
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">Belum ada tanggal. Klik "Tambah Tanggal" untuk memulai.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {data.dates.map((date, index) => (
+                                            <div key={index} className="flex items-end gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 transition-all hover:border-brand-pink/30 hover:shadow-sm">
+                                                <div className="flex-1">
+                                                    <InputLabel value={`Tanggal Hari Ke-${index + 1}`} />
+                                                    <div className="mt-1 w-full">
+                                                        <DateTimeInput
+                                                            value={date}
+                                                            onChange={(newDate) => updateDate(index, newDate)}
+                                                        />
+                                                    </div>
+                                                    {errors[`dates.${index}`] && (
+                                                        <InputError className="mt-2" message={errors[`dates.${index}`]} />
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeDate(index)}
+                                                    className="inline-flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 transition-colors"
+                                                    title="Hapus Tanggal"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {errors.dates && <InputError className="mt-2" message={errors.dates} />}
+                            </div>
+
+                            <div className="mt-6 border-t border-gray-100 dark:border-gray-700 pt-6 grid grid-cols-2 gap-4">
                                 <div>
                                     <InputLabel htmlFor="start_registration" value="Start Registration" />
                                     <DateTimeInput

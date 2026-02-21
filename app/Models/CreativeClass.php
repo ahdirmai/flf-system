@@ -26,6 +26,7 @@ class CreativeClass extends Model implements HasMedia
         'price',
         'quota',
         'status',
+        'dates',
         'start_registration',
         'end_registration',
     ];
@@ -41,6 +42,7 @@ class CreativeClass extends Model implements HasMedia
         'start_registration' => 'datetime',
         'end_registration' => 'datetime',
         'price' => 'decimal:2',
+        'dates' => 'array',
     ];
 
     public function registrations()

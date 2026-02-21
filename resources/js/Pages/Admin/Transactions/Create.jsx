@@ -80,7 +80,7 @@ export default function Create({ auth, participants, classes }) {
         <AdminLayout
             header={
                 <div className="flex items-center space-x-4">
-                    <Link href={route('admin.transactions.index')} className="text-gray-500 hover:text-gray-700 transition-colors">
+                    <Link href={route('admin.transactions.index')} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors">
                         <ArrowLeft className="w-5 h-5" />
                     </Link>
                     <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Recording New Transaction</h2>
